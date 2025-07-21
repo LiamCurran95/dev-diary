@@ -13,6 +13,7 @@ const {
   OPENAI_API_KEY,
   OPENAI_ORG,
   OPENAI_PROJECT,
+  REPO,
 } = process.env;
 
 if (
@@ -20,7 +21,8 @@ if (
   !GITHUB_USERNAME ||
   !OPENAI_API_KEY ||
   !OPENAI_ORG ||
-  !OPENAI_PROJECT
+  !OPENAI_PROJECT ||
+  !REPO
 ) {
   throw new Error("Missing required environment variables");
 }
@@ -53,9 +55,9 @@ When input is minimal or vague, apply sensible defaults based on best practices 
 `;
 
 const fetchPullRequests = async (): Promise<PullRequest[]> => {
-  const sinceDate = "2024-08-01";
+  const sinceDate = "2025-03-01";
 
-  const query = `repo:LegitFit/legitfit author:${GITHUB_USERNAME} is:pr is:merged created:>=${sinceDate}`;
+  const query = `repo:${REPO} author:${GITHUB_USERNAME} is:pr is:merged created:>=${sinceDate}`;
 
   const url = `https://api.github.com/search/issues?q=${encodeURIComponent(
     query
@@ -99,8 +101,8 @@ Given the following pull request data:
 - Closed At: ${pr.closed_at}
 
 Write a well-structured and concise Developer Diary entry using this format:
-
 ---
+
 ### 📝 {{title}} - 📅 {{closed_at | date: "%Y-%m-%d"}}
 
 **🔗 PR:** [#{{pull_request_number}}]({{pull_request_url}})  
@@ -117,7 +119,6 @@ Mention any notable performance metrics if implied by the content.
 Respond with only the structured diary entry, no explanation or additional commentary.
 
 ---
-
 `;
 
   const { text } = await generateText({ model, prompt, system });
@@ -128,16 +129,9 @@ Respond with only the structured diary entry, no explanation or additional comme
 async function main() {
   const prs = await fetchPullRequests();
 
-  const entries: string[] = [];
-
-  const prsA = prs.slice(0, 3);
-  for (const pr of prsA) {
-    const summary = await summarisePR(pr);
-
-    entries.push(summary);
-  }
+  const entries = await Promise.all(prs.map(summarisePR));
 
   await writeDiary(entries);
 }
 
-main().catch(console.error);
+main();
