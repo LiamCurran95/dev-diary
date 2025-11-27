@@ -5,6 +5,9 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "scripts": {
+    "dev-diary": "tsx dev-diary.ts"
+  },
   "dependencies": {
     "@ai-sdk/openai": "^1.3.23",
     "ai": "^4.3.19",
@@ -13,7 +16,8 @@
     "zod": "^4.0.5"
   },
   "devDependencies": {
-    "@types/node": "^24.0.14"
+    "@types/node": "^24.0.14",
+    "tsx": "^4.19.2"
   },
-  "description": "Write it for me"
+  "description": "Generates structured developer diary entries from GitHub PRs"
 }

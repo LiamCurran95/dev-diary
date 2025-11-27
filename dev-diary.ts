@@ -13,7 +13,9 @@ const {
   OPENAI_API_KEY,
   OPENAI_ORG,
   OPENAI_PROJECT,
-  REPO,
+  ORGANISATION,
+  REPOSITORY,
+  SINCE_DATE,
 } = process.env;
 
 if (
@@ -22,7 +24,9 @@ if (
   !OPENAI_API_KEY ||
   !OPENAI_ORG ||
   !OPENAI_PROJECT ||
-  !REPO
+  !ORGANISATION ||
+  !REPOSITORY ||
+  !SINCE_DATE
 ) {
   throw new Error("Missing required environment variables");
 }
@@ -55,9 +59,9 @@ When input is minimal or vague, apply sensible defaults based on best practices 
 `;
 
 const fetchPullRequests = async (): Promise<PullRequest[]> => {
-  const sinceDate = "2025-03-01";
+  const sinceDate = SINCE_DATE;
 
-  const query = `repo:${REPO} author:${GITHUB_USERNAME} is:pr is:merged created:>=${sinceDate}`;
+  const query = `repo:${ORGANISATION}/${REPOSITORY} author:${GITHUB_USERNAME} is:pr is:merged created:>=${sinceDate}`;
 
   const url = `https://api.github.com/search/issues?q=${encodeURIComponent(
     query
