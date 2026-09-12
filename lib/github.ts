@@ -114,7 +114,7 @@ export type FetchOptions = {
   since: string;
   /** YYYY-MM-DD */
   until: string;
-  /** Optional raw search qualifiers, e.g. "org:legitfit" or "repo:owner/name". */
+  /** Optional raw search qualifiers, e.g. "org:my-org" or "repo:owner/name". */
   scope?: string;
   signal?: AbortSignal;
   onProgress?: (message: string) => void;

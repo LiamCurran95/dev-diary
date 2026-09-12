@@ -51,7 +51,7 @@ export function FetchConfig(props: {
           <input
             id="scope"
             className="field"
-            placeholder="org:legitfit  or  repo:owner/name"
+            placeholder="org:my-org  or  repo:owner/name"
             value={props.scope}
             onChange={(e) => props.onScope(e.target.value)}
           />
