@@ -11,3 +11,5 @@ developer-diary.md
 next-env.d.ts
 .vercel
 *.tsbuildinfo
+prs.local.json
+*.local.json
