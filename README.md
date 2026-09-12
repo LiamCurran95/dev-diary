@@ -22,14 +22,12 @@ Then open http://localhost:3000.
 
 ### Connecting to GitHub
 
-There are two ways in, switchable in the UI.
+Sign-in is OAuth only. Your access token is stored in an encrypted, http-only
+cookie and read only by this app's server when it fetches on your behalf. Page
+JavaScript never sees it, and it is deliberately kept off the session object so
+it does not appear in `/api/auth/session` either.
 
-**Sign in with GitHub** (the default) uses OAuth. Your access token is stored in
-an encrypted, http-only cookie and read only by this app's server when it
-fetches on your behalf. Page JavaScript never sees it, and it is deliberately
-kept off the session object so it does not appear in `/api/auth/session` either.
-
-To enable it, register an OAuth App at
+To enable sign-in, register an OAuth App at
 https://github.com/settings/developers with:
 
 ```
@@ -48,15 +46,16 @@ AUTH_GITHUB_SECRET=
 In production, swap `localhost:3000` for your deployed origin in both the GitHub
 app settings and your environment.
 
-**Paste a token** is the alternative, and needs no OAuth app at all. The token
-stays in the browser tab and goes straight to GitHub. Useful for trying the app
-without registering anything, or for self-hosting it as a static site.
+If your repositories live in an organisation with SAML SSO, the OAuth app must be
+authorised for that organisation. Without it the API behaves as though those
+repositories do not exist and the search simply returns nothing, which is a
+confusing failure to debug from the outside.
 
 A note on scope: OAuth Apps have no read-only equivalent of GitHub's `repo`
-scope, so signing in grants broader access than strictly needed. If that is a
-problem for your organisation, a fine-grained personal access token (read-only,
-specific repositories, with an expiry) used via "Paste a token" is narrower, and
-a GitHub App would be narrower still.
+scope, so signing in grants broader access than this app needs — it only ever
+reads. If that breadth is unacceptable for your organisation, a GitHub App with
+read-only repository permissions is the narrower instrument, and the server route
+would need only a different token source.
 
 ### Choosing an AI provider
 
@@ -95,14 +94,15 @@ this is structurally incapable of seeing it.
 There is an opt-in checkbox to hold it in `sessionStorage` so a refresh doesn't
 lose it. That storage is cleared when the tab closes, and it is off by default.
 
-### Getting a GitHub token (for "Paste a token")
+### Getting a GitHub token (for the CLI)
 
-Create one at https://github.com/settings/tokens (Tokens classic) with the
-`repo` scope, or a fine-grained token at
-https://github.com/settings/personal-access-tokens with read-only access to the
-repositories you care about. If the work lives in an organisation with SAML SSO,
-authorise the token for that organisation, otherwise those repositories are
-invisible to the API and the search simply returns nothing.
+The web app uses OAuth and needs no token. The CLI does — create one at
+https://github.com/settings/tokens (Tokens classic) with the `repo` scope, or a
+fine-grained token at https://github.com/settings/personal-access-tokens with
+read-only access to the repositories you care about. Fine-grained is the better
+choice: read-only, scoped to named repositories, and it expires on its own.
+
+For SAML SSO organisations, authorise the token for the organisation as well.
 
 ## CLI
 
@@ -152,6 +152,37 @@ stay clear of rate limits.
 
 Rendering and export are plain markdown, so the output drops straight into a
 document, a performance review, or a CV.
+
+## Known limitations
+
+Recorded here rather than discovered later.
+
+**Long fetches will time out when deployed.** Requests to GitHub's search API are
+paced roughly two seconds apart to stay inside its 30-per-minute limit, so a
+twelve-month range across several repositories takes minutes of wall clock.
+Vercel's Hobby tier kills a function at 60 seconds. Streaming keeps bytes moving
+but does not extend that limit. The fix is to have the client request one date
+window per call rather than the whole range in one; it runs fine locally in the
+meantime.
+
+**Entries can be silently truncated.** Anthropic responses are capped at 2048
+tokens and the cap is not currently checked against `stop_reason`, so a dense
+period can produce an entry that stops mid-sentence with no warning. The OpenAI
+path sets no cap and behaves differently for the same input.
+
+**Periods with more than 60 pull requests are summarised from a subset.** The
+prompt includes the 60 most recent and pull request descriptions are truncated at
+1200 characters, while the heading still reports the full count.
+
+**Request pacing state is per-process, not per-user.** `lastSearchAt` in
+`lib/github.ts` is module scope. That was correct when the fetcher only ran in a
+browser; now that it also runs in the API route, concurrent users of one
+deployment throttle each other.
+
+**The fetcher is untested.** Unit tests cover the date bucketing and the provider
+helpers. Pagination, the recursive window-splitting around the 1000-result search
+cap, and the rate-limit backoff have no coverage, which is where bugs are most
+likely to be.
 
 ## Project layout
 
