@@ -58,26 +58,42 @@ problem for your organisation, a fine-grained personal access token (read-only,
 specific repositories, with an expiry) used via "Paste a token" is narrower, and
 a GitHub App would be narrower still.
 
-### What gets sent to OpenAI
+### Choosing an AI provider
+
+There is one API key field, and the provider is worked out from the key itself:
+a key beginning `sk-ant-` is Anthropic, anything else beginning `sk-` is OpenAI.
+The key is only ever sent to the provider it belongs to.
+
+Once a key is entered, the model dropdown is populated by asking that provider
+which models the key can actually use, rather than offering a fixed list. Both
+vendors can restrict a key or project to a subset of models, and a fixed list
+turns that into a confusing failure at generate time — "project does not have
+access to model X" — long after the point where it could have been avoided.
+
+Note that a Claude.ai subscription is not API access. Pro and Max cover
+claude.ai and Claude Code; using Claude here needs an API key from
+console.anthropic.com, billed separately.
+
+### What gets sent to the provider
 
 Generating an entry sends the titles and descriptions of the pull requests in
-that period to OpenAI. Nothing else leaves — not diffs, not file contents, not
-commit messages — but for private or employer-owned repositories, pull request
-descriptions can still carry architecture decisions, incident detail or customer
-names. Check that is acceptable under your organisation's policy before pointing
-this at work repositories. Fetching and bucketing involve no model calls at all,
-so browsing which pull requests fall in which period is always safe.
+that period to whichever provider the key belongs to. Nothing else leaves — not
+diffs, not file contents, not commit messages — but for private or
+employer-owned repositories, pull request descriptions can still carry
+architecture decisions, incident detail or customer names. Check that is
+acceptable under your organisation's policy before pointing this at work
+repositories. Fetching and bucketing involve no model calls at all, so browsing
+which pull requests fall in which period is always safe.
 
-### Where the OpenAI key lives
+### Where the API key lives
 
-The OpenAI key is held in a React state variable for the life of the tab. It is
-never written to `localStorage`, never placed in a cookie, and never sent to this
-application's server — the browser calls `api.openai.com` directly, so whoever
-hosts this is structurally incapable of seeing it.
+The key is held in a React state variable for the life of the tab. It is never
+written to `localStorage`, never placed in a cookie, and never sent to this
+application's server — the browser calls the provider directly, so whoever hosts
+this is structurally incapable of seeing it.
 
-There is an opt-in checkbox to hold pasted keys in `sessionStorage` so a refresh
-doesn't lose them. That storage is cleared when the tab closes, and it is off by
-default.
+There is an opt-in checkbox to hold it in `sessionStorage` so a refresh doesn't
+lose it. That storage is cleared when the tab closes, and it is off by default.
 
 ### Getting a GitHub token (for "Paste a token")
 

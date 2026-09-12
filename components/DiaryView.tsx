@@ -17,7 +17,7 @@ export function DiaryView(props: {
   onGranularity: (g: Granularity) => void;
   busyKeys: Set<string>;
   generating: boolean;
-  hasOpenAiKey: boolean;
+  canGenerate: boolean;
   onGenerateAll: () => void;
   onGenerateOne: (bucket: Bucket) => void;
   onCancelGenerate: () => void;
@@ -43,7 +43,7 @@ export function DiaryView(props: {
               Stop
             </Button>
           ) : (
-            <Button onClick={props.onGenerateAll} disabled={!props.hasOpenAiKey || pending === 0}>
+            <Button onClick={props.onGenerateAll} disabled={!props.canGenerate || pending === 0}>
               {generated > 0 ? `Generate ${pending} remaining` : "Generate all"}
             </Button>
           )}
@@ -60,7 +60,7 @@ export function DiaryView(props: {
         {props.prCount} pull request{props.prCount === 1 ? "" : "s"} across {props.buckets.length}{" "}
         period{props.buckets.length === 1 ? "" : "s"}
         {generated > 0 && ` · ${generated} written`}
-        {!props.hasOpenAiKey && " · add an OpenAI key above to generate entries"}
+        {!props.canGenerate && " · add an API key above to generate entries"}
       </p>
 
       <div className="stack" style={{ marginTop: "1.5rem" }}>
@@ -83,7 +83,7 @@ export function DiaryView(props: {
                       kind="ghost"
                       size="sm"
                       onClick={() => props.onGenerateOne(bucket)}
-                      disabled={!props.hasOpenAiKey || props.generating}
+                      disabled={!props.canGenerate || props.generating}
                     >
                       {entry ? "Regenerate" : "Generate"}
                     </Button>

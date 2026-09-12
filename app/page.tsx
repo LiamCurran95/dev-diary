@@ -9,11 +9,13 @@ import { DiaryView } from "@/components/DiaryView";
 import { FetchConfig } from "@/components/FetchConfig";
 import { groupIntoBuckets } from "@/lib/buckets";
 import { fetchViaServer } from "@/lib/fetch-client";
+import { detectProvider, listModels, pickDefaultModel } from "@/lib/providers";
 import { cacheKey, mapWithConcurrency, summariseBucket } from "@/lib/summarise";
 import type { Bucket, Granularity, PullRequest } from "@/lib/types";
 
-const SESSION_OAI = "dev-diary.openai-key";
+const SESSION_KEY = "dev-diary.api-key";
 const CONCURRENCY = 3;
+const KEY_DEBOUNCE_MS = 600;
 
 function message(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -23,9 +25,12 @@ export default function Page() {
   const { data: session, status } = useSession();
   const sessionLogin = session?.login ?? null;
 
-  const [openaiKey, setOpenaiKey] = useState("");
+  const [apiKey, setApiKey] = useState("");
   const [remember, setRemember] = useState(false);
-  const [model, setModel] = useState("gpt-4.1-mini");
+  const [model, setModel] = useState("");
+  const [models, setModels] = useState<string[]>([]);
+  const [modelsLoading, setModelsLoading] = useState(false);
+  const [modelsError, setModelsError] = useState<string | null>(null);
 
   const [since, setSince] = useState("");
   const [until, setUntil] = useState("");
@@ -46,6 +51,8 @@ export default function Page() {
   const fetchAbort = useRef<AbortController | null>(null);
   const genAbort = useRef<AbortController | null>(null);
 
+  const provider = useMemo(() => detectProvider(apiKey), [apiKey]);
+
   // Defaults are set after mount so server and client markup agree.
   useEffect(() => {
     const now = new Date();
@@ -57,9 +64,9 @@ export default function Page() {
     );
 
     try {
-      const stored = sessionStorage.getItem(SESSION_OAI);
+      const stored = sessionStorage.getItem(SESSION_KEY);
       if (stored) {
-        setOpenaiKey(stored);
+        setApiKey(stored);
         setRemember(true);
       }
     } catch {
@@ -69,17 +76,56 @@ export default function Page() {
 
   useEffect(() => {
     try {
-      if (remember) sessionStorage.setItem(SESSION_OAI, openaiKey);
-      else sessionStorage.removeItem(SESSION_OAI);
+      if (remember) sessionStorage.setItem(SESSION_KEY, apiKey);
+      else sessionStorage.removeItem(SESSION_KEY);
     } catch {
       /* ignore */
     }
-  }, [remember, openaiKey]);
+  }, [remember, apiKey]);
+
+  // Ask the provider which models this key may actually use, rather than
+  // offering a fixed list and failing at generate time.
+  useEffect(() => {
+    const key = apiKey.trim();
+    if (!provider || key.length < 20) {
+      setModels([]);
+      setModelsError(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      setModelsLoading(true);
+      setModelsError(null);
+
+      listModels(provider, key, controller.signal)
+        .then((ids) => {
+          setModels(ids);
+          setModel((current) => pickDefaultModel(provider, ids, current));
+          if (ids.length === 0) setModelsError("This key has no usable text models.");
+        })
+        .catch((e: unknown) => {
+          if (controller.signal.aborted) return;
+          setModels([]);
+          setModelsError(message(e));
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setModelsLoading(false);
+        });
+    }, KEY_DEBOUNCE_MS);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [provider, apiKey]);
 
   const buckets = useMemo(
     () => (prs ? groupIntoBuckets(prs, granularity) : []),
     [prs, granularity],
   );
+
+  const canGenerate = Boolean(provider && model && apiKey.trim());
 
   const runFetch = useCallback(async () => {
     const controller = new AbortController();
@@ -108,8 +154,8 @@ export default function Page() {
 
   const generate = useCallback(
     async (targets: Bucket[]) => {
-      if (!openaiKey) {
-        setError("Add your OpenAI API key to generate entries.");
+      if (!provider || !model) {
+        setError("Add an API key and pick a model before generating.");
         return;
       }
       const controller = new AbortController();
@@ -126,7 +172,8 @@ export default function Page() {
       await mapWithConcurrency(targets, CONCURRENCY, async (bucket) => {
         try {
           const markdown = await summariseBucket({
-            apiKey: openaiKey,
+            provider,
+            apiKey: apiKey.trim(),
             model,
             bucket,
             signal: controller.signal,
@@ -151,7 +198,7 @@ export default function Page() {
       setGenerating(false);
       setBusyKeys(new Set());
     },
-    [openaiKey, model],
+    [provider, apiKey, model],
   );
 
   const generateAll = useCallback(() => {
@@ -205,12 +252,16 @@ export default function Page() {
       <CredentialPanel
         sessionLogin={sessionLogin}
         sessionLoading={status === "loading"}
-        openaiKey={openaiKey}
-        onOpenaiKey={setOpenaiKey}
-        remember={remember}
-        onRemember={setRemember}
+        apiKey={apiKey}
+        onApiKey={setApiKey}
+        provider={provider}
+        models={models}
+        modelsLoading={modelsLoading}
+        modelsError={modelsError}
         model={model}
         onModel={setModel}
+        remember={remember}
+        onRemember={setRemember}
       />
 
       <FetchConfig
@@ -249,7 +300,7 @@ export default function Page() {
           onGranularity={setGranularity}
           busyKeys={busyKeys}
           generating={generating}
-          hasOpenAiKey={Boolean(openaiKey)}
+          canGenerate={canGenerate}
           onGenerateAll={generateAll}
           onGenerateOne={(b) => void generate([b])}
           onCancelGenerate={() => genAbort.current?.abort()}
