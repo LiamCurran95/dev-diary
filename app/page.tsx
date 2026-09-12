@@ -3,17 +3,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 
-import { CredentialPanel, type AuthMode } from "@/components/CredentialPanel";
+import { CredentialPanel } from "@/components/CredentialPanel";
 import { DiaryView } from "@/components/DiaryView";
 import { FetchConfig } from "@/components/FetchConfig";
-import { TimeframeSelector } from "@/components/TimeframeSelector";
 import { groupIntoBuckets } from "@/lib/buckets";
 import { fetchViaServer } from "@/lib/fetch-client";
-import { fetchMergedPullRequests, getViewer } from "@/lib/github";
 import { cacheKey, mapWithConcurrency, summariseBucket } from "@/lib/summarise";
 import type { Bucket, Granularity, PullRequest } from "@/lib/types";
 
-const SESSION_GH = "dev-diary.github-token";
 const SESSION_OAI = "dev-diary.openai-key";
 const CONCURRENCY = 3;
 
@@ -23,11 +20,7 @@ function message(error: unknown): string {
 
 export default function Page() {
   const { data: session, status } = useSession();
-
-  const [authMode, setAuthMode] = useState<AuthMode>("oauth");
-  const [githubToken, setGithubToken] = useState("");
-  const [tokenViewer, setTokenViewer] = useState<{ login: string; name: string | null } | null>(null);
-  const [connecting, setConnecting] = useState(false);
+  const sessionLogin = session?.login ?? null;
 
   const [openaiKey, setOpenaiKey] = useState("");
   const [remember, setRemember] = useState(false);
@@ -52,8 +45,6 @@ export default function Page() {
   const fetchAbort = useRef<AbortController | null>(null);
   const genAbort = useRef<AbortController | null>(null);
 
-  const sessionLogin = session?.login ?? null;
-
   // Defaults are set after mount so server and client markup agree.
   useEffect(() => {
     const now = new Date();
@@ -65,13 +56,10 @@ export default function Page() {
     );
 
     try {
-      const gh = sessionStorage.getItem(SESSION_GH);
-      const oai = sessionStorage.getItem(SESSION_OAI);
-      if (gh || oai) {
-        setGithubToken(gh ?? "");
-        setOpenaiKey(oai ?? "");
+      const stored = sessionStorage.getItem(SESSION_OAI);
+      if (stored) {
+        setOpenaiKey(stored);
         setRemember(true);
-        if (gh) setAuthMode("token");
       }
     } catch {
       /* sessionStorage can throw in private modes; memory-only is a fine fallback. */
@@ -80,38 +68,16 @@ export default function Page() {
 
   useEffect(() => {
     try {
-      if (remember) {
-        sessionStorage.setItem(SESSION_GH, githubToken);
-        sessionStorage.setItem(SESSION_OAI, openaiKey);
-      } else {
-        sessionStorage.removeItem(SESSION_GH);
-        sessionStorage.removeItem(SESSION_OAI);
-      }
+      if (remember) sessionStorage.setItem(SESSION_OAI, openaiKey);
+      else sessionStorage.removeItem(SESSION_OAI);
     } catch {
       /* ignore */
     }
-  }, [remember, githubToken, openaiKey]);
+  }, [remember, openaiKey]);
 
   const buckets = useMemo(
     () => (prs ? groupIntoBuckets(prs, granularity) : []),
     [prs, granularity],
-  );
-
-  const connect = useCallback(async () => {
-    setConnecting(true);
-    setError(null);
-    try {
-      setTokenViewer(await getViewer(githubToken));
-    } catch (e) {
-      setTokenViewer(null);
-      setError(message(e));
-    } finally {
-      setConnecting(false);
-    }
-  }, [githubToken]);
-
-  const canFetch = Boolean(
-    since && until && (authMode === "oauth" ? sessionLogin : tokenViewer),
   );
 
   const runFetch = useCallback(async () => {
@@ -123,25 +89,13 @@ export default function Page() {
     setProgress("Starting…");
 
     try {
-      const list =
-        authMode === "oauth"
-          ? await fetchViaServer({
-              since,
-              until,
-              scope,
-              signal: controller.signal,
-              onProgress: setProgress,
-            })
-          : await fetchMergedPullRequests({
-              token: githubToken,
-              login: tokenViewer!.login,
-              since,
-              until,
-              scope,
-              signal: controller.signal,
-              onProgress: setProgress,
-            });
-
+      const list = await fetchViaServer({
+        since,
+        until,
+        scope,
+        signal: controller.signal,
+        onProgress: setProgress,
+      });
       setPrs(list);
       setEntries({});
     } catch (e) {
@@ -149,7 +103,7 @@ export default function Page() {
     } finally {
       setFetching(false);
     }
-  }, [authMode, githubToken, tokenViewer, since, until, scope]);
+  }, [since, until, scope]);
 
   const generate = useCallback(
     async (targets: Bucket[]) => {
@@ -195,10 +149,9 @@ export default function Page() {
   }, [generate, buckets, entries, model]);
 
   const fullMarkdown = useCallback(() => {
-    const who = authMode === "oauth" ? sessionLogin : tokenViewer?.login;
     const header = [
       "# Developer diary",
-      `_${who ?? "unknown"} · ${since} to ${until} · grouped ${granularity}_`,
+      `_${sessionLogin ?? "unknown"} · ${since} to ${until} · grouped ${granularity}_`,
     ].join("\n\n");
 
     const body = buckets
@@ -207,7 +160,7 @@ export default function Page() {
       .join("\n\n---\n\n");
 
     return `${header}\n\n---\n\n${body}\n`;
-  }, [buckets, entries, model, authMode, sessionLogin, tokenViewer, since, until, granularity]);
+  }, [buckets, entries, model, sessionLogin, since, until, granularity]);
 
   const onExport = useCallback(() => {
     const blob = new Blob([fullMarkdown()], { type: "text/markdown;charset=utf-8" });
@@ -233,7 +186,7 @@ export default function Page() {
     <main className="mx-auto max-w-4xl px-4" style={{ paddingBlock: "2.5rem" }}>
       <header className="mb-6">
         <h1 className="text-2xl font-semibold">Dev Diary</h1>
-        <p className="mt-1 text-sm" style={{ color: "var(--muted)" }}>
+        <p className="mt-1 text-sm muted">
           Turn your merged pull requests into a written diary. Fetch once, then re-chunk by any
           timeframe without touching the network again.
         </p>
@@ -241,15 +194,8 @@ export default function Page() {
 
       <div className="space-y-4">
         <CredentialPanel
-          authMode={authMode}
-          onAuthMode={setAuthMode}
           sessionLogin={sessionLogin}
           sessionLoading={status === "loading"}
-          githubToken={githubToken}
-          onGithubToken={setGithubToken}
-          tokenViewer={tokenViewer}
-          connecting={connecting}
-          onConnect={() => void connect()}
           openaiKey={openaiKey}
           onOpenaiKey={setOpenaiKey}
           remember={remember}
@@ -267,7 +213,8 @@ export default function Page() {
           onScope={setScope}
           fetching={fetching}
           progress={progress}
-          canFetch={canFetch}
+          canFetch={Boolean(since && until && sessionLogin)}
+          signedIn={Boolean(sessionLogin)}
           onFetch={() => void runFetch()}
           onCancel={() => fetchAbort.current?.abort()}
           prCount={prs?.length ?? null}
@@ -283,38 +230,29 @@ export default function Page() {
         )}
 
         {prs && prs.length > 0 && (
-          <>
-            <section className="panel p-5">
-              <h2
-                className="text-sm font-semibold tracking-wide uppercase mb-3"
-                style={{ color: "var(--muted)" }}
-              >
-                Chunk by
-              </h2>
-              <TimeframeSelector value={granularity} onChange={setGranularity} disabled={generating} />
-            </section>
-
-            <DiaryView
-              buckets={buckets}
-              entries={entries}
-              model={model}
-              busyKeys={busyKeys}
-              generating={generating}
-              hasOpenAiKey={Boolean(openaiKey)}
-              onGenerateAll={generateAll}
-              onGenerateOne={(b) => void generate([b])}
-              onExport={onExport}
-              onCopy={() => void onCopy()}
-              copied={copied}
-            />
-          </>
+          <DiaryView
+            buckets={buckets}
+            prCount={prs.length}
+            entries={entries}
+            model={model}
+            granularity={granularity}
+            onGranularity={setGranularity}
+            busyKeys={busyKeys}
+            generating={generating}
+            hasOpenAiKey={Boolean(openaiKey)}
+            onGenerateAll={generateAll}
+            onGenerateOne={(b) => void generate([b])}
+            onExport={onExport}
+            onCopy={() => void onCopy()}
+            copied={copied}
+          />
         )}
 
         {prs && prs.length === 0 && (
-          <div className="panel p-5 text-sm" style={{ color: "var(--muted)" }}>
+          <div className="panel p-5 text-sm muted">
             No merged pull requests found in that range. If the work lives in a private
-            organisation, check that access has been granted for it — for SAML SSO organisations
-            that means authorising this app, or the token, for the organisation explicitly.
+            organisation, check this app has been granted access to it — for SAML SSO
+            organisations that means authorising it for the organisation explicitly.
           </div>
         )}
       </div>

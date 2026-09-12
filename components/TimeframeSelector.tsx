@@ -8,25 +8,18 @@ export function TimeframeSelector(props: {
   disabled: boolean;
 }) {
   return (
-    <div className="flex flex-wrap gap-1.5">
-      {GRANULARITIES.map((g) => {
-        const active = g.value === props.value;
-        return (
-          <button
-            key={g.value}
-            className="btn-ghost"
-            disabled={props.disabled}
-            onClick={() => props.onChange(g.value)}
-            style={
-              active
-                ? { background: "var(--accent-soft)", borderColor: "var(--accent)", color: "var(--accent)" }
-                : undefined
-            }
-          >
-            {g.label}
-          </button>
-        );
-      })}
+    <div className="flex flex-wrap gap-1.5" role="group" aria-label="Chunk by">
+      {GRANULARITIES.map((g) => (
+        <button
+          key={g.value}
+          className={`btn-ghost${g.value === props.value ? " chip" : ""}`}
+          disabled={props.disabled}
+          aria-pressed={g.value === props.value}
+          onClick={() => props.onChange(g.value)}
+        >
+          {g.label}
+        </button>
+      ))}
     </div>
   );
 }

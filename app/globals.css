@@ -145,3 +145,22 @@ body {
   padding: 0.1rem 0.3rem;
   font-size: 0.85em;
 }
+
+/* Shared text utilities, so components stop repeating inline colour styles. */
+.muted {
+  color: var(--muted);
+}
+
+.label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.chip {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}

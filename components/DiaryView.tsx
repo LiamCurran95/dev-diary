@@ -1,13 +1,18 @@
 "use client";
 
-import type { Bucket } from "@/lib/types";
 import { cacheKey } from "@/lib/summarise";
+import type { Bucket, Granularity } from "@/lib/types";
+
 import { Markdown } from "./Markdown";
+import { TimeframeSelector } from "./TimeframeSelector";
 
 export function DiaryView(props: {
   buckets: Bucket[];
+  prCount: number;
   entries: Record<string, string>;
   model: string;
+  granularity: Granularity;
+  onGranularity: (g: Granularity) => void;
   busyKeys: Set<string>;
   generating: boolean;
   hasOpenAiKey: boolean;
@@ -17,36 +22,45 @@ export function DiaryView(props: {
   onCopy: () => void;
   copied: boolean;
 }) {
-  const generatedCount = props.buckets.filter((b) => props.entries[cacheKey(b, props.model)]).length;
+  const generated = props.buckets.filter((b) => props.entries[cacheKey(b, props.model)]).length;
+  const pending = props.buckets.length - generated;
 
   return (
     <section className="panel p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-sm font-semibold tracking-wide uppercase" style={{ color: "var(--muted)" }}>
-          Diary · {props.buckets.length} period{props.buckets.length === 1 ? "" : "s"}
-        </h2>
+        <TimeframeSelector
+          value={props.granularity}
+          onChange={props.onGranularity}
+          disabled={props.generating}
+        />
+
         <div className="flex flex-wrap gap-2">
           <button
             className="btn"
             onClick={props.onGenerateAll}
-            disabled={props.generating || !props.hasOpenAiKey || props.buckets.length === 0}
+            disabled={props.generating || !props.hasOpenAiKey || pending === 0}
           >
-            {props.generating ? "Generating…" : generatedCount > 0 ? "Generate missing" : "Generate all"}
+            {props.generating
+              ? "Generating…"
+              : generated > 0
+                ? `Generate ${pending} remaining`
+                : "Generate all"}
           </button>
-          <button className="btn-ghost" onClick={props.onCopy} disabled={generatedCount === 0}>
-            {props.copied ? "Copied" : "Copy markdown"}
+          <button className="btn-ghost" onClick={props.onCopy} disabled={generated === 0}>
+            {props.copied ? "Copied" : "Copy"}
           </button>
-          <button className="btn-ghost" onClick={props.onExport} disabled={generatedCount === 0}>
+          <button className="btn-ghost" onClick={props.onExport} disabled={generated === 0}>
             Export .md
           </button>
         </div>
       </div>
 
-      {!props.hasOpenAiKey && (
-        <p className="mt-3 text-xs" style={{ color: "var(--muted)" }}>
-          Add your OpenAI key above to generate entries. The pull requests below are already loaded.
-        </p>
-      )}
+      <p className="mt-3 text-xs muted">
+        {props.prCount} pull request{props.prCount === 1 ? "" : "s"} across {props.buckets.length}{" "}
+        period{props.buckets.length === 1 ? "" : "s"}
+        {generated > 0 && ` · ${generated} written`}
+        {!props.hasOpenAiKey && " · add an OpenAI key above to generate entries"}
+      </p>
 
       <div className="mt-4 space-y-3">
         {props.buckets.map((bucket) => {
@@ -58,7 +72,7 @@ export function DiaryView(props: {
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h3 className="font-semibold">{bucket.label}</h3>
                 <div className="flex items-center gap-3">
-                  <span className="text-xs" style={{ color: "var(--muted)" }}>
+                  <span className="text-xs muted">
                     {bucket.prs.length} PR{bucket.prs.length === 1 ? "" : "s"}
                   </span>
                   <button
@@ -76,16 +90,21 @@ export function DiaryView(props: {
                   <Markdown>{entry}</Markdown>
                 </div>
               ) : (
-                <ul className="mt-2 space-y-1 text-xs" style={{ color: "var(--muted)" }}>
-                  {bucket.prs.slice(0, 5).map((pr) => (
+                <ul className="mt-2 space-y-1 text-xs muted">
+                  {bucket.prs.slice(0, 4).map((pr) => (
                     <li key={pr.id}>
-                      <a href={pr.url} target="_blank" rel="noreferrer" style={{ color: "var(--accent)" }}>
+                      <a
+                        href={pr.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ color: "var(--accent)" }}
+                      >
                         {pr.repo}#{pr.number}
                       </a>{" "}
                       {pr.title}
                     </li>
                   ))}
-                  {bucket.prs.length > 5 && <li>and {bucket.prs.length - 5} more…</li>}
+                  {bucket.prs.length > 4 && <li>and {bucket.prs.length - 4} more…</li>}
                 </ul>
               )}
             </article>

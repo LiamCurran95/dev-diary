@@ -10,28 +10,43 @@ export function FetchConfig(props: {
   fetching: boolean;
   progress: string;
   canFetch: boolean;
+  signedIn: boolean;
   onFetch: () => void;
   onCancel: () => void;
   prCount: number | null;
 }) {
   return (
     <section className="panel p-5">
-      <h2 className="text-sm font-semibold tracking-wide uppercase" style={{ color: "var(--muted)" }}>
-        Range
-      </h2>
+      <h2 className="label">Range</h2>
 
-      <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_1fr_2fr_auto] sm:items-end">
+      <div className="mt-2.5 grid gap-3 sm:grid-cols-[1fr_1fr_2fr_auto] sm:items-end">
         <div>
-          <label className="block text-xs font-medium mb-1" htmlFor="since">From</label>
-          <input id="since" className="field" type="date" value={props.since} onChange={(e) => props.onSince(e.target.value)} />
+          <label className="block text-xs mb-1 muted" htmlFor="since">
+            From
+          </label>
+          <input
+            id="since"
+            className="field"
+            type="date"
+            value={props.since}
+            onChange={(e) => props.onSince(e.target.value)}
+          />
         </div>
         <div>
-          <label className="block text-xs font-medium mb-1" htmlFor="until">To</label>
-          <input id="until" className="field" type="date" value={props.until} onChange={(e) => props.onUntil(e.target.value)} />
+          <label className="block text-xs mb-1 muted" htmlFor="until">
+            To
+          </label>
+          <input
+            id="until"
+            className="field"
+            type="date"
+            value={props.until}
+            onChange={(e) => props.onUntil(e.target.value)}
+          />
         </div>
         <div>
-          <label className="block text-xs font-medium mb-1" htmlFor="scope">
-            Limit to <span style={{ color: "var(--muted)" }}>(optional)</span>
+          <label className="block text-xs mb-1 muted" htmlFor="scope">
+            Limit to (optional)
           </label>
           <input
             id="scope"
@@ -42,19 +57,25 @@ export function FetchConfig(props: {
           />
         </div>
         {props.fetching ? (
-          <button className="btn-ghost" onClick={props.onCancel}>Cancel</button>
+          <button className="btn-ghost" onClick={props.onCancel}>
+            Cancel
+          </button>
         ) : (
           <button className="btn" onClick={props.onFetch} disabled={!props.canFetch}>
-            Fetch PRs
+            Fetch
           </button>
         )}
       </div>
 
-      {(props.progress || props.prCount !== null) && (
-        <p className="mt-3 text-xs" style={{ color: "var(--muted)" }}>
-          {props.fetching ? props.progress : `${props.prCount} merged pull requests loaded. Re-chunking below is instant — no refetch needed.`}
-        </p>
-      )}
+      <p className="mt-3 text-xs muted">
+        {props.fetching
+          ? props.progress
+          : !props.signedIn
+            ? "Sign in with GitHub to fetch your merged pull requests."
+            : props.prCount !== null
+              ? `${props.prCount} loaded. Re-chunking below is instant — no refetch needed.`
+              : "Fetches every merged pull request you authored in this range."}
+      </p>
     </section>
   );
 }
