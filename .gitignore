@@ -10,3 +10,4 @@ yarn.lock
 developer-diary.md
 next-env.d.ts
 .vercel
+*.tsbuildinfo
