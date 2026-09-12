@@ -14,34 +14,69 @@ There are two ways to run it: a web app, and the original CLI script.
 
 ```bash
 npm install
+cp .env.example .env.local   # fill in the values below
 npm run dev
 ```
 
-Then open http://localhost:3000, paste a GitHub token and an OpenAI key, pick a
-date range, and fetch.
+Then open http://localhost:3000.
 
-### Where the keys live
+### Connecting to GitHub
 
-Both keys are held in a React state variable for the life of the tab. They are
+There are two ways in, switchable in the UI.
+
+**Sign in with GitHub** (the default) uses OAuth. Your access token is stored in
+an encrypted, http-only cookie and read only by this app's server when it
+fetches on your behalf. Page JavaScript never sees it, and it is deliberately
+kept off the session object so it does not appear in `/api/auth/session` either.
+
+To enable it, register an OAuth App at
+https://github.com/settings/developers with:
+
+```
+Homepage URL:               http://localhost:3000
+Authorization callback URL: http://localhost:3000/api/auth/callback/github
+```
+
+then set three values in `.env.local`:
+
+```
+AUTH_SECRET=          # generate with: npx auth secret
+AUTH_GITHUB_ID=
+AUTH_GITHUB_SECRET=
+```
+
+In production, swap `localhost:3000` for your deployed origin in both the GitHub
+app settings and your environment.
+
+**Paste a token** is the alternative, and needs no OAuth app at all. The token
+stays in the browser tab and goes straight to GitHub. Useful for trying the app
+without registering anything, or for self-hosting it as a static site.
+
+A note on scope: OAuth Apps have no read-only equivalent of GitHub's `repo`
+scope, so signing in grants broader access than strictly needed. If that is a
+problem for your organisation, a fine-grained personal access token (read-only,
+specific repositories, with an expiry) used via "Paste a token" is narrower, and
+a GitHub App would be narrower still.
+
+### Where the OpenAI key lives
+
+The OpenAI key is held in a React state variable for the life of the tab. It is
 never written to `localStorage`, never placed in a cookie, and never sent to this
-application's server — the browser calls `api.github.com` and `api.openai.com`
-directly, so whoever hosts this is structurally incapable of seeing them.
+application's server — the browser calls `api.openai.com` directly, so whoever
+hosts this is structurally incapable of seeing it.
 
-There is an opt-in checkbox to hold them in `sessionStorage` instead, so a page
-refresh doesn't lose them. That storage is cleared when the tab closes. It is off
-by default.
+There is an opt-in checkbox to hold pasted keys in `sessionStorage` so a refresh
+doesn't lose them. That storage is cleared when the tab closes, and it is off by
+default.
 
-Because nothing secret lives on the server, the app deploys as a fully static
-site — Vercel, Netlify, Cloudflare Pages or GitHub Pages all work, with no
-environment variables to configure.
-
-### Getting a GitHub token
+### Getting a GitHub token (for "Paste a token")
 
 Create one at https://github.com/settings/tokens (Tokens classic) with the
-`repo` scope. If the work you want to summarise lives in an organisation with
-SAML SSO, use the "Configure SSO" dropdown next to the token to authorise it for
-that organisation, otherwise those repositories are invisible to the API and the
-search simply returns nothing.
+`repo` scope, or a fine-grained token at
+https://github.com/settings/personal-access-tokens with read-only access to the
+repositories you care about. If the work lives in an organisation with SAML SSO,
+authorise the token for that organisation, otherwise those repositories are
+invisible to the API and the search simply returns nothing.
 
 ## CLI
 
@@ -95,7 +130,8 @@ document, a performance review, or a CV.
 ## Project layout
 
 ```
-app/          Next.js App Router pages
+app/          Next.js App Router pages and API routes
+auth.ts       Auth.js configuration (GitHub provider)
 components/   UI
 lib/          Shared logic — github.ts, buckets.ts, prompts.ts, summarise.ts
 lib/__tests__ Unit tests for the bucketing maths
