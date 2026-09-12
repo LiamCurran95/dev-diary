@@ -6,6 +6,12 @@ import { fetchMergedPullRequests } from "@/lib/github";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// Fetching a wide date range takes minutes, because GitHub's search API is
+// paced to stay inside its 30-requests-per-minute limit. 60s is the Vercel
+// Hobby ceiling; Pro allows up to 300. Beyond that the client must drive one
+// date window per request rather than the whole range in one.
+export const maxDuration = 60;
+
 type Body = { since?: string; until?: string; scope?: string };
 
 /**
