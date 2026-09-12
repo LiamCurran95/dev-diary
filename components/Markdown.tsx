@@ -5,15 +5,13 @@ import remarkGfm from "remark-gfm";
 
 export function Markdown({ children }: { children: string }) {
   return (
-    <div className="markdown">
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        components={{
-          a: (props) => <a {...props} target="_blank" rel="noreferrer" />,
-        }}
-      >
-        {children}
-      </ReactMarkdown>
-    </div>
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        a: (anchorProps) => <a {...anchorProps} target="_blank" rel="noreferrer" />,
+      }}
+    >
+      {children}
+    </ReactMarkdown>
   );
 }

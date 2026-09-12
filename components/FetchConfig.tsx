@@ -1,5 +1,7 @@
 "use client";
 
+import { Button, InlineLoading, TextInput, Tile } from "@carbon/react";
+
 export function FetchConfig(props: {
   since: string;
   onSince: (v: string) => void;
@@ -16,66 +18,62 @@ export function FetchConfig(props: {
   prCount: number | null;
 }) {
   return (
-    <section className="panel p-5">
-      <h2 className="label">Range</h2>
+    <Tile className="panel">
+      <p className="section-label">Range</p>
 
-      <div className="mt-2.5 grid gap-3 sm:grid-cols-[1fr_1fr_2fr_auto] sm:items-end">
-        <div>
-          <label className="block text-xs mb-1 muted" htmlFor="since">
-            From
-          </label>
-          <input
+      <div className="row">
+        <div style={{ flex: "1 1 9rem" }}>
+          <TextInput
             id="since"
-            className="field"
             type="date"
+            labelText="From"
             value={props.since}
             onChange={(e) => props.onSince(e.target.value)}
           />
         </div>
-        <div>
-          <label className="block text-xs mb-1 muted" htmlFor="until">
-            To
-          </label>
-          <input
+        <div style={{ flex: "1 1 9rem" }}>
+          <TextInput
             id="until"
-            className="field"
             type="date"
+            labelText="To"
             value={props.until}
             onChange={(e) => props.onUntil(e.target.value)}
           />
         </div>
-        <div>
-          <label className="block text-xs mb-1 muted" htmlFor="scope">
-            Limit to (optional)
-          </label>
-          <input
+        <div style={{ flex: "2 1 16rem" }}>
+          <TextInput
             id="scope"
-            className="field"
+            labelText="Limit to (optional)"
             placeholder="org:my-org  or  repo:owner/name"
             value={props.scope}
             onChange={(e) => props.onScope(e.target.value)}
           />
         </div>
+
         {props.fetching ? (
-          <button className="btn-ghost" onClick={props.onCancel}>
+          <Button kind="danger--tertiary" onClick={props.onCancel}>
             Cancel
-          </button>
+          </Button>
         ) : (
-          <button className="btn" onClick={props.onFetch} disabled={!props.canFetch}>
+          <Button onClick={props.onFetch} disabled={!props.canFetch}>
             Fetch
-          </button>
+          </Button>
         )}
       </div>
 
-      <p className="mt-3 text-xs muted">
-        {props.fetching
-          ? props.progress
-          : !props.signedIn
-            ? "Sign in with GitHub to fetch your merged pull requests."
-            : props.prCount !== null
-              ? `${props.prCount} loaded. Re-chunking below is instant — no refetch needed.`
-              : "Fetches every merged pull request you authored in this range."}
-      </p>
-    </section>
+      <div style={{ marginTop: "1rem" }}>
+        {props.fetching ? (
+          <InlineLoading description={props.progress || "Fetching…"} status="active" />
+        ) : (
+          <p className="muted" style={{ fontSize: "0.75rem" }}>
+            {!props.signedIn
+              ? "Sign in with GitHub to fetch your merged pull requests."
+              : props.prCount !== null
+                ? `${props.prCount} loaded. Re-chunking below is instant — no refetch needed.`
+                : "Fetches every merged pull request you authored in this range."}
+          </p>
+        )}
+      </div>
+    </Tile>
   );
 }

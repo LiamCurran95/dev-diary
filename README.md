@@ -58,6 +58,16 @@ problem for your organisation, a fine-grained personal access token (read-only,
 specific repositories, with an expiry) used via "Paste a token" is narrower, and
 a GitHub App would be narrower still.
 
+### What gets sent to OpenAI
+
+Generating an entry sends the titles and descriptions of the pull requests in
+that period to OpenAI. Nothing else leaves — not diffs, not file contents, not
+commit messages — but for private or employer-owned repositories, pull request
+descriptions can still carry architecture decisions, incident detail or customer
+names. Check that is acceptable under your organisation's policy before pointing
+this at work repositories. Fetching and bucketing involve no model calls at all,
+so browsing which pull requests fall in which period is always safe.
+
 ### Where the OpenAI key lives
 
 The OpenAI key is held in a React state variable for the life of the tab. It is
@@ -130,7 +140,7 @@ document, a performance review, or a CV.
 ## Project layout
 
 ```
-app/          Next.js App Router pages and API routes
+app/          Next.js App Router pages, API routes, Carbon theme (globals.scss)
 auth.ts       Auth.js configuration (GitHub provider)
 components/   UI
 lib/          Shared logic — github.ts, buckets.ts, prompts.ts, summarise.ts

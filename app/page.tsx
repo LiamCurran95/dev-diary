@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { InlineNotification } from "@carbon/react";
 import { useSession } from "next-auth/react";
 
 import { CredentialPanel } from "@/components/CredentialPanel";
@@ -118,6 +119,10 @@ export default function Page() {
       setError(null);
       setBusyKeys(new Set(targets.map((b) => b.key)));
 
+      // Collected rather than set per failure, so concurrent errors don't
+      // overwrite one another and leave only the last visible.
+      const failures: string[] = [];
+
       await mapWithConcurrency(targets, CONCURRENCY, async (bucket) => {
         try {
           const markdown = await summariseBucket({
@@ -128,7 +133,7 @@ export default function Page() {
           });
           setEntries((prev) => ({ ...prev, [cacheKey(bucket, model)]: markdown }));
         } catch (e) {
-          if (!controller.signal.aborted) setError(message(e));
+          if (!controller.signal.aborted) failures.push(`${bucket.label}: ${message(e)}`);
         } finally {
           setBusyKeys((prev) => {
             const next = new Set(prev);
@@ -137,6 +142,11 @@ export default function Page() {
           });
         }
       });
+
+      if (failures.length === 1) setError(failures[0]);
+      else if (failures.length > 1) {
+        setError(`${failures.length} periods failed. First: ${failures[0]}`);
+      }
 
       setGenerating(false);
       setBusyKeys(new Set());
@@ -165,10 +175,10 @@ export default function Page() {
   const onExport = useCallback(() => {
     const blob = new Blob([fullMarkdown()], { type: "text/markdown;charset=utf-8" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `developer-diary-${since}-to-${until}.md`;
-    a.click();
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `developer-diary-${since}-to-${until}.md`;
+    anchor.click();
     URL.revokeObjectURL(url);
   }, [fullMarkdown, since, until]);
 
@@ -183,79 +193,81 @@ export default function Page() {
   }, [fullMarkdown]);
 
   return (
-    <main className="mx-auto max-w-4xl px-4" style={{ paddingBlock: "2.5rem" }}>
-      <header className="mb-6">
-        <h1 className="text-2xl font-semibold">Dev Diary</h1>
-        <p className="mt-1 text-sm muted">
+    <div className="stack">
+      <div>
+        <h1 style={{ fontSize: "1.75rem", fontWeight: 400, margin: 0 }}>Developer diary</h1>
+        <p className="muted" style={{ marginTop: "0.5rem", fontSize: "0.875rem" }}>
           Turn your merged pull requests into a written diary. Fetch once, then re-chunk by any
           timeframe without touching the network again.
         </p>
-      </header>
-
-      <div className="space-y-4">
-        <CredentialPanel
-          sessionLogin={sessionLogin}
-          sessionLoading={status === "loading"}
-          openaiKey={openaiKey}
-          onOpenaiKey={setOpenaiKey}
-          remember={remember}
-          onRemember={setRemember}
-          model={model}
-          onModel={setModel}
-        />
-
-        <FetchConfig
-          since={since}
-          onSince={setSince}
-          until={until}
-          onUntil={setUntil}
-          scope={scope}
-          onScope={setScope}
-          fetching={fetching}
-          progress={progress}
-          canFetch={Boolean(since && until && sessionLogin)}
-          signedIn={Boolean(sessionLogin)}
-          onFetch={() => void runFetch()}
-          onCancel={() => fetchAbort.current?.abort()}
-          prCount={prs?.length ?? null}
-        />
-
-        {error && (
-          <div
-            className="panel p-4 text-sm"
-            style={{ borderColor: "var(--danger)", color: "var(--danger)" }}
-          >
-            {error}
-          </div>
-        )}
-
-        {prs && prs.length > 0 && (
-          <DiaryView
-            buckets={buckets}
-            prCount={prs.length}
-            entries={entries}
-            model={model}
-            granularity={granularity}
-            onGranularity={setGranularity}
-            busyKeys={busyKeys}
-            generating={generating}
-            hasOpenAiKey={Boolean(openaiKey)}
-            onGenerateAll={generateAll}
-            onGenerateOne={(b) => void generate([b])}
-            onExport={onExport}
-            onCopy={() => void onCopy()}
-            copied={copied}
-          />
-        )}
-
-        {prs && prs.length === 0 && (
-          <div className="panel p-5 text-sm muted">
-            No merged pull requests found in that range. If the work lives in a private
-            organisation, check this app has been granted access to it — for SAML SSO
-            organisations that means authorising it for the organisation explicitly.
-          </div>
-        )}
       </div>
-    </main>
+
+      <CredentialPanel
+        sessionLogin={sessionLogin}
+        sessionLoading={status === "loading"}
+        openaiKey={openaiKey}
+        onOpenaiKey={setOpenaiKey}
+        remember={remember}
+        onRemember={setRemember}
+        model={model}
+        onModel={setModel}
+      />
+
+      <FetchConfig
+        since={since}
+        onSince={setSince}
+        until={until}
+        onUntil={setUntil}
+        scope={scope}
+        onScope={setScope}
+        fetching={fetching}
+        progress={progress}
+        canFetch={Boolean(since && until && sessionLogin)}
+        signedIn={Boolean(sessionLogin)}
+        onFetch={() => void runFetch()}
+        onCancel={() => fetchAbort.current?.abort()}
+        prCount={prs?.length ?? null}
+      />
+
+      {error && (
+        <InlineNotification
+          kind="error"
+          lowContrast
+          title="Something went wrong"
+          subtitle={error}
+          onCloseButtonClick={() => setError(null)}
+        />
+      )}
+
+      {prs && prs.length > 0 && (
+        <DiaryView
+          buckets={buckets}
+          prCount={prs.length}
+          entries={entries}
+          model={model}
+          granularity={granularity}
+          onGranularity={setGranularity}
+          busyKeys={busyKeys}
+          generating={generating}
+          hasOpenAiKey={Boolean(openaiKey)}
+          onGenerateAll={generateAll}
+          onGenerateOne={(b) => void generate([b])}
+          onCancelGenerate={() => genAbort.current?.abort()}
+          onExport={onExport}
+          onCopy={() => void onCopy()}
+          copied={copied}
+        />
+      )}
+
+      {prs && prs.length === 0 && (
+        <InlineNotification
+          kind="info"
+          lowContrast
+          title="No merged pull requests in that range"
+          subtitle="If the work lives in a private organisation, check this app has been granted access to it — for SAML SSO organisations that means authorising it for the organisation explicitly."
+          hideCloseButton
+        />
+      )}
+    </div>
   );
 }

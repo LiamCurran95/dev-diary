@@ -1,0 +1,149 @@
+@use "@carbon/react";
+@use "@carbon/react/scss/theme" as carbon-theme;
+@use "@carbon/react/scss/themes" as carbon-themes;
+@use "@carbon/react/scss/spacing" as spacing;
+@use "@carbon/react/scss/type" as type;
+
+// Carbon ships light and dark token sets. Bind them to the viewer's preference
+// so the whole component library follows the system theme.
+:root {
+  @include carbon-theme.theme(carbon-themes.$white);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    @include carbon-theme.theme(carbon-themes.$g100);
+  }
+}
+
+html {
+  // The UI Shell header is fixed at 3rem; keep content clear of it.
+  scroll-padding-top: 3rem;
+}
+
+body {
+  background: var(--cds-background);
+  color: var(--cds-text-primary);
+  font-family: var(--font-plex), "IBM Plex Sans", system-ui, sans-serif;
+}
+
+// next/font generates its own family name, so point Carbon's components at it
+// rather than letting them fall back to a system face.
+.cds--btn,
+.cds--text-input,
+.cds--select-input,
+.cds--checkbox-label,
+.cds--label,
+.cds--form__helper-text,
+.cds--content-switcher-btn,
+.cds--tag,
+.cds--inline-notification {
+  font-family: inherit;
+}
+
+.app-main {
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: calc(3rem + #{spacing.$spacing-07}) spacing.$spacing-05 spacing.$spacing-09;
+}
+
+.stack > * + * {
+  margin-top: spacing.$spacing-05;
+}
+
+.panel {
+  padding: spacing.$spacing-06;
+}
+
+.panel--nested {
+  padding: spacing.$spacing-05;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: spacing.$spacing-05;
+  align-items: flex-end;
+}
+
+.row--between {
+  justify-content: space-between;
+  align-items: center;
+}
+
+.grow {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.muted {
+  color: var(--cds-text-secondary);
+}
+
+.section-label {
+  @include type.type-style("label-01");
+
+  color: var(--cds-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: spacing.$spacing-04;
+}
+
+// Rendered diary entries.
+.markdown {
+  @include type.type-style("body-01");
+
+  color: var(--cds-text-primary);
+
+  h2 {
+    @include type.type-style("heading-03");
+
+    margin: 0 0 spacing.$spacing-02;
+  }
+
+  p {
+    margin: spacing.$spacing-03 0;
+  }
+
+  em {
+    @include type.type-style("label-01");
+
+    color: var(--cds-text-secondary);
+    font-style: normal;
+  }
+
+  strong {
+    @include type.type-style("label-01");
+
+    display: block;
+    margin: spacing.$spacing-05 0 spacing.$spacing-02;
+    color: var(--cds-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  ul {
+    list-style: disc;
+    padding-left: spacing.$spacing-05;
+    margin: spacing.$spacing-02 0;
+  }
+
+  li {
+    margin: spacing.$spacing-02 0;
+  }
+
+  a {
+    color: var(--cds-link-primary);
+    text-decoration: underline;
+
+    &:hover {
+      color: var(--cds-link-primary-hover);
+    }
+  }
+
+  code {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    background: var(--cds-layer-accent);
+    padding: 0 spacing.$spacing-02;
+  }
+}

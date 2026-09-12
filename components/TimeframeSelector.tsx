@@ -1,5 +1,7 @@
 "use client";
 
+import { ContentSwitcher, Switch } from "@carbon/react";
+
 import { GRANULARITIES, type Granularity } from "@/lib/types";
 
 export function TimeframeSelector(props: {
@@ -7,19 +9,20 @@ export function TimeframeSelector(props: {
   onChange: (v: Granularity) => void;
   disabled: boolean;
 }) {
+  const selectedIndex = GRANULARITIES.findIndex((g) => g.value === props.value);
+
   return (
-    <div className="flex flex-wrap gap-1.5" role="group" aria-label="Chunk by">
+    <ContentSwitcher
+      selectedIndex={selectedIndex < 0 ? 0 : selectedIndex}
+      onChange={({ index }) => {
+        if (typeof index === "number" && GRANULARITIES[index]) {
+          props.onChange(GRANULARITIES[index].value);
+        }
+      }}
+    >
       {GRANULARITIES.map((g) => (
-        <button
-          key={g.value}
-          className={`btn-ghost${g.value === props.value ? " chip" : ""}`}
-          disabled={props.disabled}
-          aria-pressed={g.value === props.value}
-          onClick={() => props.onChange(g.value)}
-        >
-          {g.label}
-        </button>
+        <Switch key={g.value} name={g.value} text={g.label} disabled={props.disabled} />
       ))}
-    </div>
+    </ContentSwitcher>
   );
 }

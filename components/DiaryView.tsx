@@ -1,5 +1,7 @@
 "use client";
 
+import { Button, InlineLoading, Tag, Tile } from "@carbon/react";
+
 import { cacheKey } from "@/lib/summarise";
 import type { Bucket, Granularity } from "@/lib/types";
 
@@ -18,6 +20,7 @@ export function DiaryView(props: {
   hasOpenAiKey: boolean;
   onGenerateAll: () => void;
   onGenerateOne: (bucket: Bucket) => void;
+  onCancelGenerate: () => void;
   onExport: () => void;
   onCopy: () => void;
   copied: boolean;
@@ -26,91 +29,96 @@ export function DiaryView(props: {
   const pending = props.buckets.length - generated;
 
   return (
-    <section className="panel p-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <Tile className="panel">
+      <div className="row row--between">
         <TimeframeSelector
           value={props.granularity}
           onChange={props.onGranularity}
           disabled={props.generating}
         />
 
-        <div className="flex flex-wrap gap-2">
-          <button
-            className="btn"
-            onClick={props.onGenerateAll}
-            disabled={props.generating || !props.hasOpenAiKey || pending === 0}
-          >
-            {props.generating
-              ? "Generating…"
-              : generated > 0
-                ? `Generate ${pending} remaining`
-                : "Generate all"}
-          </button>
-          <button className="btn-ghost" onClick={props.onCopy} disabled={generated === 0}>
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+          {props.generating ? (
+            <Button kind="danger--tertiary" onClick={props.onCancelGenerate}>
+              Stop
+            </Button>
+          ) : (
+            <Button onClick={props.onGenerateAll} disabled={!props.hasOpenAiKey || pending === 0}>
+              {generated > 0 ? `Generate ${pending} remaining` : "Generate all"}
+            </Button>
+          )}
+          <Button kind="tertiary" onClick={props.onCopy} disabled={generated === 0}>
             {props.copied ? "Copied" : "Copy"}
-          </button>
-          <button className="btn-ghost" onClick={props.onExport} disabled={generated === 0}>
+          </Button>
+          <Button kind="tertiary" onClick={props.onExport} disabled={generated === 0}>
             Export .md
-          </button>
+          </Button>
         </div>
       </div>
 
-      <p className="mt-3 text-xs muted">
+      <p className="muted" style={{ marginTop: "1rem", fontSize: "0.75rem" }}>
         {props.prCount} pull request{props.prCount === 1 ? "" : "s"} across {props.buckets.length}{" "}
         period{props.buckets.length === 1 ? "" : "s"}
         {generated > 0 && ` · ${generated} written`}
         {!props.hasOpenAiKey && " · add an OpenAI key above to generate entries"}
       </p>
 
-      <div className="mt-4 space-y-3">
+      <div className="stack" style={{ marginTop: "1.5rem" }}>
         {props.buckets.map((bucket) => {
           const entry = props.entries[cacheKey(bucket, props.model)];
           const busy = props.busyKeys.has(bucket.key);
 
           return (
-            <article key={bucket.key} className="panel p-4" style={{ background: "var(--bg)" }}>
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <h3 className="font-semibold">{bucket.label}</h3>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs muted">
+            <Tile key={bucket.key} className="panel--nested">
+              <div className="row row--between">
+                <h3 style={{ fontSize: "1rem", fontWeight: 600, margin: 0 }}>{bucket.label}</h3>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                  <Tag type="cool-gray">
                     {bucket.prs.length} PR{bucket.prs.length === 1 ? "" : "s"}
-                  </span>
-                  <button
-                    className="btn-ghost"
-                    onClick={() => props.onGenerateOne(bucket)}
-                    disabled={busy || !props.hasOpenAiKey}
-                  >
-                    {busy ? "…" : entry ? "Regenerate" : "Generate"}
-                  </button>
+                  </Tag>
+                  {busy ? (
+                    <InlineLoading description="Writing…" status="active" />
+                  ) : (
+                    <Button
+                      kind="ghost"
+                      size="sm"
+                      onClick={() => props.onGenerateOne(bucket)}
+                      disabled={!props.hasOpenAiKey || props.generating}
+                    >
+                      {entry ? "Regenerate" : "Generate"}
+                    </Button>
+                  )}
                 </div>
               </div>
 
               {entry ? (
-                <div className="mt-3">
+                <div className="markdown" style={{ marginTop: "1rem" }}>
                   <Markdown>{entry}</Markdown>
                 </div>
               ) : (
-                <ul className="mt-2 space-y-1 text-xs muted">
+                <ul className="muted" style={{ marginTop: "0.75rem", fontSize: "0.75rem" }}>
                   {bucket.prs.slice(0, 4).map((pr) => (
-                    <li key={pr.id}>
+                    <li key={pr.id} style={{ margin: "0.25rem 0" }}>
                       <a
                         href={pr.url}
                         target="_blank"
                         rel="noreferrer"
-                        style={{ color: "var(--accent)" }}
+                        style={{ color: "var(--cds-link-primary)" }}
                       >
                         {pr.repo}#{pr.number}
                       </a>{" "}
                       {pr.title}
                     </li>
                   ))}
-                  {bucket.prs.length > 4 && <li>and {bucket.prs.length - 4} more…</li>}
+                  {bucket.prs.length > 4 && (
+                    <li style={{ margin: "0.25rem 0" }}>and {bucket.prs.length - 4} more…</li>
+                  )}
                 </ul>
               )}
-            </article>
+            </Tile>
           );
         })}
       </div>
-    </section>
+    </Tile>
   );
 }

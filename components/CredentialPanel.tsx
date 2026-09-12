@@ -1,5 +1,6 @@
 "use client";
 
+import { Button, Checkbox, Select, SelectItem, Tag, TextInput, Tile } from "@carbon/react";
 import { signIn, signOut } from "next-auth/react";
 
 import { MODELS } from "@/lib/summarise";
@@ -17,79 +18,74 @@ export function CredentialPanel(props: {
   const signedIn = Boolean(props.sessionLogin);
 
   return (
-    <section className="panel p-5">
-      <div className="grid gap-6 sm:grid-cols-2 sm:gap-10">
-        <div>
-          <h2 className="label">GitHub</h2>
+    <Tile className="panel">
+      <div className="row" style={{ alignItems: "flex-start", gap: "2.5rem" }}>
+        <div className="grow">
+          <p className="section-label">GitHub</p>
 
-          <div className="mt-2.5 flex items-center gap-3">
-            <button
-              className={signedIn ? "btn-ghost" : "btn"}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+            <Button
+              kind={signedIn ? "tertiary" : "primary"}
               disabled={props.sessionLoading}
               onClick={() => void (signedIn ? signOut() : signIn("github"))}
             >
-              {props.sessionLoading ? "…" : signedIn ? "Sign out" : "Sign in with GitHub"}
-            </button>
-            {signedIn && (
-              <span className="text-sm font-medium" style={{ color: "var(--accent)" }}>
-                @{props.sessionLogin}
-              </span>
-            )}
+              {props.sessionLoading ? "Checking…" : signedIn ? "Sign out" : "Sign in with GitHub"}
+            </Button>
+            {signedIn && <Tag type="green">@{props.sessionLogin}</Tag>}
           </div>
 
-          <p className="mt-2.5 text-xs muted">
+          <p className="muted" style={{ marginTop: "1rem", fontSize: "0.75rem", lineHeight: 1.5 }}>
             Your access token stays in an encrypted, http-only cookie and is read only by this
             app&rsquo;s server. Page scripts never see it.
           </p>
         </div>
 
-        <div>
-          <h2 className="label">OpenAI</h2>
+        <div className="grow">
+          <p className="section-label">OpenAI</p>
 
-          <div className="mt-2.5 flex gap-2">
-            <input
-              className="field"
-              type="password"
-              autoComplete="off"
-              spellCheck={false}
-              placeholder="sk-…"
-              value={props.openaiKey}
-              onChange={(e) => props.onOpenaiKey(e.target.value)}
-            />
-            <select
-              className="field"
-              style={{ width: "auto" }}
+          <TextInput
+            id="openai-key"
+            type="password"
+            labelText="API key"
+            placeholder="sk-…"
+            autoComplete="off"
+            spellCheck={false}
+            helperText="Held in this tab and sent straight to OpenAI — it never reaches this app's server."
+            value={props.openaiKey}
+            onChange={(e) => props.onOpenaiKey(e.target.value)}
+          />
+
+          <div style={{ marginTop: "1rem" }}>
+            <Select
+              id="model"
+              labelText="Model"
               value={props.model}
               onChange={(e) => props.onModel(e.target.value)}
-              aria-label="Model"
             >
               {MODELS.map((m) => (
-                <option key={m.value} value={m.value}>
-                  {m.label}
-                </option>
+                <SelectItem key={m.value} value={m.value} text={m.label} />
               ))}
-            </select>
+            </Select>
           </div>
 
-          <p className="mt-2.5 text-xs muted">
-            Held in this tab and sent straight to OpenAI — it never reaches this app&rsquo;s
-            server.
+          <p
+            className="muted"
+            style={{ marginTop: "1rem", fontSize: "0.75rem", lineHeight: 1.5 }}
+          >
+            Pull request titles and descriptions are sent to OpenAI so it can write the entries.
+            For private or work repositories, check that is acceptable before generating.
           </p>
 
-          <label className="mt-2 flex items-start gap-2 text-xs muted">
-            <input
-              type="checkbox"
-              className="mt-0.5"
+          <div style={{ marginTop: "1rem" }}>
+            <Checkbox
+              id="remember-key"
+              labelText="Keep the key for this tab, so a refresh doesn't lose it"
               checked={props.remember}
-              onChange={(e) => props.onRemember(e.target.checked)}
+              onChange={(_event, data: { checked: boolean }) => props.onRemember(data.checked)}
             />
-            <span>
-              Keep it for this tab, so a refresh doesn&rsquo;t lose it. Cleared when the tab
-              closes.
-            </span>
-          </label>
+          </div>
         </div>
       </div>
-    </section>
+    </Tile>
   );
 }
