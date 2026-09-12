@@ -1,23 +1,32 @@
 {
   "name": "dev-diary",
-  "version": "1.0.0",
-  "main": "index.js",
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Generate structured developer diary entries from your GitHub pull requests",
   "scripts": {
-    "dev-diary": "tsx dev-diary.ts"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "dev-diary": "tsx scripts/dev-diary.ts"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^1.3.23",
-    "ai": "^4.3.19",
-    "axios": "^1.10.0",
-    "dotenv": "^17.2.0",
-    "zod": "^4.0.5"
+    "next": "^15.5.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-markdown": "^9.0.1",
+    "remark-gfm": "^4.0.0"
   },
   "devDependencies": {
-    "@types/node": "^24.0.14",
-    "tsx": "^4.19.2"
-  },
-  "description": "Generates structured developer diary entries from GitHub PRs"
+    "@tailwindcss/postcss": "^4.1.0",
+    "@types/node": "^22.15.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "dotenv": "^17.2.0",
+    "tailwindcss": "^4.1.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
+  }
 }

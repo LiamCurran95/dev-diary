@@ -1,2 +1,12 @@
+node_modules/
+.next/
+out/
+build/
 .env
-/node_modules
+.env.local
+.DS_Store
+*.log
+yarn.lock
+developer-diary.md
+next-env.d.ts
+.vercel
