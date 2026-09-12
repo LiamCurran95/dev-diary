@@ -187,12 +187,25 @@ likely to be.
 ## Project layout
 
 ```
-app/          Next.js App Router pages, API routes, Carbon theme (globals.scss)
-auth.ts       Auth.js configuration (GitHub provider)
-components/   UI
-lib/          Shared logic — github.ts, buckets.ts, prompts.ts, summarise.ts
-lib/__tests__ Unit tests for the bucketing maths
-scripts/      The CLI entry point
+app/
+  api/auth/[...nextauth]/  Auth.js route handlers
+  api/pull-requests/       Server-side fetch; holds the OAuth token, streams NDJSON progress
+  globals.scss             Carbon theme, bound to the system colour scheme
+  layout.tsx, page.tsx     Shell and the single page
+  providers.tsx            Session provider
+auth.ts                    Auth.js config; the access token is kept off the session object
+components/                UI, built on @carbon/react
+lib/
+  github.ts                Paginated, throttled pull request search
+  buckets.ts               Timeframe grouping (pure, synchronous)
+  providers.ts             OpenAI and Anthropic behind one interface; key-prefix detection
+  summarise.ts             One diary entry per period
+  prompts.ts               System prompt and the per-period prompt
+  fetch-client.ts          Reads the server route's streamed response
+  types.ts                 Shared types
+  __tests__/               Unit tests for bucketing and provider selection
+scripts/dev-diary.ts       CLI entry point, sharing lib/ with the web app
+types/next-auth.d.ts       Session and JWT type augmentation
 ```
 
 ## Checks
