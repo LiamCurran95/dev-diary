@@ -1,0 +1,35 @@
+{
+  "name": "dev-diary",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Generate structured developer diary entries from your GitHub pull requests",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "dev-diary": "tsx scripts/dev-diary.ts"
+  },
+  "dependencies": {
+    "@carbon/icons-react": "^11.91.0",
+    "@carbon/react": "^1.116.0",
+    "@ibm/plex-sans": "^1.1.0",
+    "next": "^15.5.0",
+    "next-auth": "^5.0.0-beta.32",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-markdown": "^9.0.1",
+    "remark-gfm": "^4.0.0",
+    "sass": "^1.104.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "dotenv": "^17.2.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
+  }
+}
